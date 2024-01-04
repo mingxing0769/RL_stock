@@ -10,8 +10,8 @@ from stable_baselines3.common.callbacks import CheckpointCallback
 
 # 注册环境
 register(
-    id='StockTradingEnv-v2',
-    entry_point='gym_stock_trading.StockTradingEnv2:StockTradingEnv'
+    id='StockTradingEnv-v0',
+    entry_point='gym_stock_trading.StockTradingEnv:StockTradingEnv'
 )
 
 # 定义变量
@@ -59,7 +59,7 @@ def train_trade():
     print('训练总步长度：', Total_time_steps)
 
     # 创建训练gym环境
-    train_env = gymnasium.make('StockTradingEnv-v2', df=df)
+    train_env = gymnasium.make('StockTradingEnv-v0', df=df)
 
     # 如果需要加载模型，则从指定路径加载已有模型
     if os.path.exists(model_path):
