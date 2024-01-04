@@ -1,0 +1,128 @@
+import csv
+import os
+
+import numpy as np
+import gymnasium as gym
+from gymnasium import spaces
+
+
+class StockTradingEnv(gym.Env):
+    metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
+
+    def __init__(self, df):
+        super(StockTradingEnv, self).__init__()
+
+        self.df = df
+        self.n = 119  # 前n+1步数据做为观察空间
+        self.current_step = self.n
+        self.action_space = spaces.Discrete(2)  # 0: 等待, 1-3: 1 5天后有正收益 2 10天后有正收益 3 20天后有正收益
+        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(37, self.n + 1), dtype=np.float32)
+
+    def observation(self):
+        obs = np.array([
+            self.df.loc[self.current_step - self.n:self.current_step, 'open'],
+            self.df.loc[self.current_step - self.n:self.current_step, 'high'],
+            self.df.loc[self.current_step - self.n:self.current_step, 'low'],
+            self.df.loc[self.current_step - self.n:self.current_step, 'close'],
+            self.df.loc[self.current_step - self.n:self.current_step, 'volume'],
+            self.df.loc[self.current_step - self.n:self.current_step, 'amount'],
+            self.df.loc[self.current_step - self.n:self.current_step, 'turn'],
+            self.df.loc[self.current_step - self.n:self.current_step, 'pcfNcfTTM'],
+            self.df.loc[self.current_step - self.n:self.current_step, 'pctChg'],
+            self.df.loc[self.current_step - self.n:self.current_step, 'peTTM'],
+            self.df.loc[self.current_step - self.n:self.current_step, 'pbMRQ'],
+            self.df.loc[self.current_step - self.n:self.current_step, 'psTTM'],
+            self.df.loc[self.current_step - self.n:self.current_step, 'Macd'],
+            self.df.loc[self.current_step - self.n:self.current_step, 'Macd_signal'],
+            self.df.loc[self.current_step - self.n:self.current_step, 'Macd_hist'],
+            self.df.loc[self.current_step - self.n:self.current_step, 'Vol_120_sma'],
+            self.df.loc[self.current_step - self.n:self.current_step, 'Vol_65_sma'],
+            self.df.loc[self.current_step - self.n:self.current_step, 'Vol_20_sma'],
+            self.df.loc[self.current_step - self.n:self.current_step, 'Cci'],
+            self.df.loc[self.current_step - self.n:self.current_step, 'Boll_upper'],
+            self.df.loc[self.current_step - self.n:self.current_step, 'Boll_middle'],
+            self.df.loc[self.current_step - self.n:self.current_step, 'Boll_lower'],
+            self.df.loc[self.current_step - self.n:self.current_step, 'Dmi_di1'],
+            self.df.loc[self.current_step - self.n:self.current_step, 'Dmi_di2'],
+            self.df.loc[self.current_step - self.n:self.current_step, 'Dmi_adx'],
+            self.df.loc[self.current_step - self.n:self.current_step, 'Dmi_adxr'],
+            self.df.loc[self.current_step - self.n:self.current_step, 'close_MA_7'],
+            self.df.loc[self.current_step - self.n:self.current_step, 'close_MA_12'],
+            self.df.loc[self.current_step - self.n:self.current_step, 'close_MA_22'],
+            self.df.loc[self.current_step - self.n:self.current_step, 'close_MA_35'],
+            self.df.loc[self.current_step - self.n:self.current_step, 'close_MA_65'],
+            self.df.loc[self.current_step - self.n:self.current_step, 'close_MA_135'],
+            self.df.loc[self.current_step - self.n:self.current_step, 'close_MA_250'],
+            self.df.loc[self.current_step - self.n:self.current_step, 'HH'],
+            self.df.loc[self.current_step - self.n:self.current_step, 'LL'],
+            self.df.loc[self.current_step - self.n:self.current_step, 'CC'],
+            self.df.loc[self.current_step - self.n:self.current_step, 'CC_L']
+        ], dtype=np.float32)
+        return obs
+
+    def step(self, action):
+        terminated = False
+        current_price = self.df.loc[self.current_step, 'real_close']
+
+        if self.current_step % 250 < 5:
+            pre_price_1 = self.df.loc[self.current_step + 5, 'real_close']
+        else:
+            pre_price_1 = 0
+
+        # if self.current_step % 250 < 60:
+        #     pre_price_2 = self.df.loc[self.current_step + 60, 'real_close']
+        # else:
+        #     pre_price_2 = 0
+        #
+        # if self.current_step % 250 < 120:
+        #     pre_price_3 = self.df.loc[self.current_step + 120, 'real_close']
+        # else:
+        #     pre_price_3 = 0
+
+        # if self.current_step % 250 < 120 and action > 2:
+        #     action = 0
+        # if self.current_step % 250 < 60 and action > 1:
+        #     action = 0
+        if self.current_step % 250 < 5 and action > 0:
+            action = 0
+
+        if action == 1:
+            if current_price < pre_price_1:
+                reward = 1
+            else:
+                reward = -1
+        # elif action == 2:
+        #     if current_price < pre_price_2:
+        #         reward = 2
+        #     else:
+        #         reward = -2
+        # elif action == 3:
+        #     if current_price < pre_price_3:
+        #         reward = 3
+        #     else:
+        #         reward = -3
+        else:
+            reward = 0
+
+        # # 更新步数
+        self.current_step += 1
+
+        if self.current_step % 250 == 0:
+            self.current_step += self.n
+            terminated = True
+
+        if self.current_step >= len(self.df.loc[:, 'open'].values):
+            self.current_step = self.n  # 执行步数
+            terminated = True
+
+        # 获取奖励、观察和信息
+        observation = self.observation()
+
+        return observation, reward, terminated, False, {}
+
+    def reset(self, seed=None, options=None):
+        super().reset(seed=seed)
+
+        observation = self.observation()
+
+        return observation, {}
