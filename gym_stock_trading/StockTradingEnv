@@ -13,7 +13,7 @@ class StockTradingEnv(gym.Env):
         super(StockTradingEnv, self).__init__()
 
         self.df = df
-        self.n = 119  # 前n+1步数据做为观察空间
+        self.n = 19  # 前n+1步数据做为观察空间
         self.current_step = self.n
         self.action_space = spaces.Discrete(2)  # 0: 等待, 1-3: 1 5天后有正收益 2 10天后有正收益 3 20天后有正收益
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(37, self.n + 1), dtype=np.float32)
@@ -64,26 +64,18 @@ class StockTradingEnv(gym.Env):
         terminated = False
         current_price = self.df.loc[self.current_step, 'real_close']
 
-        if self.current_step % 250 < 5:
+        # 测试调试代码
+        # code = self.df.loc[self.current_step, 'code']
+        # next5_code = self.df.loc[self.current_step + 5, 'code']
+        # rest_step = 250 - self.current_step % 250
+        # print(f'当前步：{self.current_step},当前步代码:{code},5步后代码:{next5_code}, 剩余步数:{rest_step}')
+
+        if 250 - self.current_step % 250 > 6:
             pre_price_1 = self.df.loc[self.current_step + 5, 'real_close']
         else:
             pre_price_1 = 0
 
-        # if self.current_step % 250 < 60:
-        #     pre_price_2 = self.df.loc[self.current_step + 60, 'real_close']
-        # else:
-        #     pre_price_2 = 0
-        #
-        # if self.current_step % 250 < 120:
-        #     pre_price_3 = self.df.loc[self.current_step + 120, 'real_close']
-        # else:
-        #     pre_price_3 = 0
-
-        # if self.current_step % 250 < 120 and action > 2:
-        #     action = 0
-        # if self.current_step % 250 < 60 and action > 1:
-        #     action = 0
-        if self.current_step % 250 < 5 and action > 0:
+        if 250 - self.current_step % 250 < 6 and action > 0:
             action = 0
 
         if action == 1:
@@ -91,16 +83,7 @@ class StockTradingEnv(gym.Env):
                 reward = 1
             else:
                 reward = -1
-        # elif action == 2:
-        #     if current_price < pre_price_2:
-        #         reward = 2
-        #     else:
-        #         reward = -2
-        # elif action == 3:
-        #     if current_price < pre_price_3:
-        #         reward = 3
-        #     else:
-        #         reward = -3
+
         else:
             reward = 0
 
@@ -111,7 +94,7 @@ class StockTradingEnv(gym.Env):
             self.current_step += self.n
             terminated = True
 
-        if self.current_step >= len(self.df.loc[:, 'open'].values):
+        if self.current_step >= len(self.df):
             self.current_step = self.n  # 执行步数
             terminated = True
 
